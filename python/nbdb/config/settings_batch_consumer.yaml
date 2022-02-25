@@ -1,0 +1,140 @@
+# Sparse store related settings
+sparse_store:
+  # Number of data point keys in a single partition
+  partition_size: 1000
+  druid_mode: true
+  ttl_days: 365
+  # If true we transform the data by applying some streaming functions like non-negative-derivatives
+  # this is not prod ready and meant for running benchmarks to estimate the value
+  enable_stream_transforms: false
+
+  rollups:
+    report_clock_skew: false
+
+  sparse_algos:
+    min_delta: 0.05
+    # Number of seconds after which a data point is forced to be written even if it has not changed
+    forced_write_interval: 43200
+    quantile: .9
+    window_size: 10
+
+  sparse_telemetry:
+    # Log metrics which are dropping less than this threshold.
+    # Range: 0.0 to 1.0
+    drop_ratio_log_threshold: 0
+    gen_sparse_data_distribution: false
+
+  # Stats related settings
+  stats:
+    # How many stats objects are cached in memory
+    cache_size: 5000000
+    # Triggers an expensive byte size scan this will impact throughput. Should
+    # be done sparingly ideally disabled on production and maybe enabled on one
+    # metric consumer to get an idea
+    telemetry_report_interval_seconds: 300
+
+  # Settings for heartbeat scan algorithm that detects missing data points and
+  # marks them with a tombstone
+  heartbeat_scan:
+    interval: 1800
+    # A missing point marker is added if the current datapoint is not within
+    # `data_gap_detection_interval` seconds of the previous datapoint
+    data_gap_detection_interval: 60
+    # A series is terminated and a tombstone marker is added if no datapoints
+    # are seen within `termination_detection_interval` seconds
+    termination_detection_interval: 3600
+
+# We allow the ability to "trace" certain metrics. The tracing config is
+# periodically pulled from an S3 location
+tracing_config:
+  s3_bucket: "anomalydb-prod-druid"
+  s3_key: "tracing_config.yaml"
+  # We check S3 ever `refresh_interval` seconds to see if a new config was
+  # uploaded
+  refresh_interval: 600
+
+
+schema_creator:
+  # number of workers used by the schema_creator to periodically create the schema
+  num_workers: 1
+  cleanup_on_boot: false
+  druid_topic_prefix: "anomalydb_druid"
+
+Druid:
+  connection_string:
+    overlord_ip: "anomalydb-druid.dummy.com"
+    overlord_port: 8090
+    router_ip: "127.0.0.1"
+    router_port: 80
+    cc_router_ip: "127.0.0.1"
+    cc_router_port: 80
+    read_path: '/druid/v2/sql/'
+    scheme: 'http'
+    # Interval in seconds after which druidadmin reloads the full schema in
+    # memory
+    schema_refresh_time: 600
+  datasource:
+    maxRowsInMemory: 600000
+    maxRowsPerSegment: 40000000
+    # Drop messages that are older than 3 months. We need to pick such a large
+    # period because hydration requests may be for bundles a few months old
+    lateMessageRejectionPeriod: P90D
+    # Drop messages which are too early. Ideally this should never happen
+    earlyMessageRejectionPeriod: P2D
+  batch_ingest:
+    # From https://druid.apache.org/docs/latest/ingestion/native-batch.html,
+    # If this value is set to 1, the supervisor task processes data ingestion on
+    # its own instead of spawning worker tasks.
+    maxNumConcurrentSubTasks: 2
+
+sparse_batch_consumer:
+  kafka_brokers: "kafka.dummy.com:9092"
+  topic: "anomalydb_sparse_batch_consumer"
+  group: "anomaly_db_sparse_batch_consumers_group"
+  metric_protocol: graphite
+  num_consumers: 1
+  max_inflight_tasks: 50
+  max_inflight_messages: 200
+  max_messages_to_combine: 5
+  # Fetch tasks for the last N days on consumer assignment
+  num_days_to_fetch_on_assign: 2
+  # Bucket to fetch sparse JSONs from
+  s3_bucket: anomalydb-batch-ingest
+
+dense_batch_consumer:
+  kafka_brokers: "kafka.dummy.com:9092"
+  topic: "anomalydb_dense_batch_consumer"
+  group: "anomaly_db_dense_batch_consumers_group"
+  num_consumers: 1
+  s3_bucket: test-metrics
+  # Messages with timestamp older than this will be reported through clock
+  # skew. Turning on debug logging will log all such messages
+  past_message_lag: 7776000  # 90d
+  # Messages with timestamp newer than this will be reported through clock
+  # skew. Turning on debug logging will log all such messages
+  future_message_lag: 172800  # 2d
+  # Only convert the following cluster UUIDs. If empty, all clusters are
+  # converted
+  conversion_whitelist:
+    - "cluster-uuid-x-y-z"
+
+logging:
+  # Set to true (recommended for containers) to only log to console, false if log to file
+  log_to_console: true
+  # Log per metric level details (Extremely verbose, meant only for debugging)
+  log_metrics: false
+  # must be specified when log_to_console is false
+  # log_dir: "/mnt/anomalydb/log"
+  debug: false
+
+telemetry:
+  protocol: influx
+  # We add the environment tag to all metrics
+  environment: production
+  influx:
+    # Interval in seconds at which frequency the metrics are pushed to graphite
+    reporting_interval: 600
+    prefix: "anomalydb"
+    database: "anomalydb-metrics"
+    server: "test.timestream.com"
+    port: 80

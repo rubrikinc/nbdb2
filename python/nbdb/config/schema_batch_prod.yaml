@@ -1,0 +1,152 @@
+# This documents the schema supported by AnomalyDB
+# A measurement must be declared in the schema file, otherwise it will get dropped
+#
+# <measurement name>:
+#  <f name>: [optional]
+#    delta_threshold: [optional, default is 0.05]
+
+# Minimum interval at storage stores, so all data points are aligned to ceiling
+# of this interval
+# Batch ingest raw data is received at 1m granularity. But we currently only
+# store data at 10m & 1h granularity
+MIN_STORAGE_INTERVAL: 600
+
+sparse_algos:
+  - algo: "SparseAlgoLossLess"
+    pattern: [".*count$", ".*uptime.*"]
+  - algo: "SparseAlgoPercentileWindowDelta"
+    pattern: [".*p\\d+$"]
+    min_delta: 0.01
+    # If possible, quantile should be chosen such that quantile*window_size is a whole number
+    # This is because we don't interpolate values when computing quantile
+    quantile: .9
+    window_size: 10
+  - algo: "SparseAlgoLastValueDelta"
+    min_delta: 0.01
+
+
+transforms:
+  non_negative_derivative:
+    include_regex: [".*service.*Run.*count$"]
+    exclude_regex: []
+    suffix: "t_meter"
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+# Measurement list required by influx explorer
+measurements:
+
+# Data sources created in druid.
+#
+# Each datasource can have the following attributes:
+# a. num_shards (optional) - Number of sharded Druid datasources to create. We
+# will create a total of `num_shards` Druid datasources with the naming
+# convention "<name>_t_<shard_suffix>"
+#
+# b. shard_tag_key (required if using num_shards) - We will use the value
+# corresponding to the specified tag key to decide the shard suffix.
+#
+# c. windows (optional) - Used for rollup datasources to specify the rollup
+# windows. Specify rollup window duration in seconds (eg. 3600 for 1h rollups)
+datasources:
+  # Datasource for flat Graphite metrics
+  all_metrics:
+    num_shards: 400
+    # Sharded based on cluster ID which is the second token for flat Graphite
+    # metrics
+    shard_tag_key: tkn1
+
+
+  # Rollup datasource for flat Graphite metrics
+  rollup_data_source:
+    num_shards: 30
+    # Sharded based on cluster ID which is the second token for flat Graphite
+    # metrics
+    shard_tag_key: tkn1
+    # We are only keeping 10m and 1h rollup values for batch ingest.
+    # Since batch ingest data is only going to be kept for 30d, 4h rollup values don't have much use.
+    windows: [600, 3600]
+
+  # Catch all rollup datasource
+  rollup_catchall:
+    windows: [600, 3600]
+
+  dashboard_queries_1:
+    num_shards: 20
+    # Sharded based on cluster ID which is the second token for flat Graphite
+    # metrics
+    shard_tag_key: tkn1
+
+# The longest prefix match found below identifies the datasource for a
+# measurement. It is a many-to-one relationship, multiple prefixes can map to
+# same datasource.
+#
+# For graphite, there is no measurement. Therefore we count the metric name
+# from the fourth token onwards as the measurement. Eg. The measurement for
+# 'clusters.ABC.XYZ.Diamond.uptime.seconds' would be 'Diamond.uptime.seconds'
+measurement_to_datasource_mapping:
+  # Prefix rules and fallback datasource for Graphite metrics
+  graphite:
+    rules: {}
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: all_metrics
+
+
+rollups:
+  # Rollup windows
+  # We are only keeping 10m and 1h rollups for batch ingest. Unlike
+  # realtime, we are not keeping 4h rollups because batch ingest data is only
+  # retained for 30d and hence 4h rollups will not have much use
+  windows: [600, 3600]
+
+  # Rollup data source mapping:
+  # We iterate over each mapping rule below to determine the rollup datasource
+  # to be used, and try to find the first matching rule.
+  #
+  # Each rule has 4 attributes:
+  # a. match_tag_key: Match rule if metric contains the specified tag key
+  # b. match_tag_value (optional): Match rule if metric tag value for the
+  # `match_tag_key` matches the specified value.
+  # c. datasource: Rollup datasource to be used
+  #
+  # Rule matching works in 2 ways:
+  # a. Rule contains only `match_tag_key`: A metric will match this rule only
+  # if it contains the tag key specified.
+  # b. Rule contains both `match_tag_key` and `match_tag_value`. A metric will
+  # match this rule if it matches both the tag key & value specified in the
+  # rule.
+  #
+  # If a metric matches multiple rules, the earlier rule is given preference.
+  rollup_datasource_match_rules:
+    # All Graphite metrics beginning with "clusters" go to this sharded
+    # datasource.
+    # NOTE: The tag_key prefix should match TOKEN_TAG_PREFIX in data_point.py
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_data_source
+
+  # All metrics which do not match any of the rules above go to this fallback
+  # datasource
+  catch_all_datasource: rollup_catchall
+
+  # Default rollup algorithm to use
+  default_algo: "mean"
+  # Regex rules to match the rollup algorithm
+  algos:
+    # For monotonically increasing counters, using last() makes the most sense
+    last:
+      - ".*count$"
+      - ".*tkn3=Diamond\\|tkn4=schedulerstats\\|"
+      - ".*tkn3=Service\\|tkn4=CPU\\|"
+    # Diamond.nfacct metrics are like meters, requiring us to use sum() to
+    # compute the right rollup values
+    sum:
+      - ".*tkn3=Diamond\\|tkn4=nfacct\\|"
+
+# dashboard queries, in future this list will be runtime generated and likely stored in druid itself
+dashboard_queries:
+  clusters: []
+  dashboard_queries_1: []

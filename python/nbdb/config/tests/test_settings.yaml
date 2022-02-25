@@ -1,0 +1,48 @@
+# Sparse store related settings
+sparse_store:
+  # Number of data point keys in a single partition
+  bucket_size: 1000
+  min_delta: 0.01
+  ttl_days: 365
+
+  data_points:
+    queue_size: 1000000
+    batch_size: 10000
+    rate_limit: 100
+  # Stats related settings
+  stats:
+    # How many stats objects are cached in memory
+    cache_size: 1000000
+    queue_size: 1000000
+    # Maximum number of stats objects that are batched together in a write to the DB
+    batch_size: 10000
+    # Maximum number of stats objects written per second to the DB
+    # note this is a rate limit on number of stats objects, not batches, the actual
+    # queries to the DB will be fewer
+    rate_limit: 100
+  rate_limiter:
+    sleep_time: 0.1
+    reset_time: 1
+
+scylladb:
+  connection_string : {
+    "contact_points": [ "3.211.48.187", "52.202.27.117", "54.243.25.179"],
+    "local_dc": "AWS_US_REGION",
+    "port": 9042,
+    "username": "scylla",
+    "password": "test"
+  }
+
+# Kafka metric consumer settings
+metric_consumer:
+  kafka_brokers: ["localhost:9092"]
+  log_dir: "/mnt/anomalydb/log/metric_consumers"
+  num_consumers: 1
+
+  redis_host: "redis"
+  redis_port: 6379
+
+indexing_consumer:
+  kafka_brokers: ["localhost:9092"]
+  topic_name: "indexing_docs"
+  num_consumers: 1

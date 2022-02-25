@@ -1,0 +1,361 @@
+# Sparse store related settings
+sparse_store:
+  # Number of data point keys in a single partition
+  partition_size: 1000
+  # If true we transform the data by applying some streaming functions like non-negative-derivatives
+  # this is not prod ready and meant for running benchmarks to estimate the value
+  enable_stream_transforms: true
+  # If True we use the druid as a backend instead of elastic and scylladb
+  druid_mode: True
+
+  rollups:
+    report_clock_skew: true
+
+  sparse_algos:
+    min_delta: 0.05
+    # Number of seconds after which a data point is forced to be written even if it has not changed
+    forced_write_interval: 43200
+    quantile: .9
+    window_size: 10
+
+  sparse_telemetry:
+    # Log metrics which are dropping less than this threshold.
+    # Range: 0.0 to 1.0
+    drop_ratio_log_threshold: 0
+    gen_sparse_data_distribution: false
+
+  # Stats related settings
+  stats:
+    # How many stats objects are cached in memory
+    cache_size: 1000000
+    # triggers an expensive byte size scan this will impact throughput, should be done sparingly
+    # ideally disabled on production and maybe enabled on one metric consumer to get an idea
+    telemetry_report_interval_seconds: 1800
+
+  # Settings for heartbeat scan algorithm that detects missing data points and marks them with a tombstone
+  heartbeat_scan:
+    # very aggressive setting because in local run we do not generate with real - clock
+    # but generate data akin to a historical import, so the heart beat scan may not run before the test is done
+    interval: 1
+    # A missing point marker is added if the current datapoint is not within
+    # `data_gap_detection_interval` seconds of the previous datapoint
+    data_gap_detection_interval: 60
+    # A series is terminated and a tombstone marker is added if no datapoints
+    # are seen within `termination_detection_interval` seconds
+    termination_detection_interval: 120
+
+# We allow the ability to "trace" certain metrics. The tracing config is
+# periodically pulled from an S3 location
+tracing_config:
+  s3_bucket:
+  s3_key:
+  # We check S3 ever `refresh_interval` seconds to see if a new config was
+  # uploaded
+  refresh_interval: 600
+
+# RedisDB implementation of StoreInterface (we only support read/write on stat objects)
+redisdb:
+  connection_string:
+    # Must be set to true when using redis-cluster
+    is_cluster_mode: false
+    # For single instance mode use the following settings
+    hostname: "redis"
+    port: 6379
+    password:
+  # Number of threads the redis_client uses to do parallel writes to redis
+  # write_workers: 50
+
+# Kafka implementation of StoreInterface (we only support write functionality on data points)
+# The sparse data points are written to this kafka stream by the DataPointsBatchWriter
+# Druid can directly consume some topics from this kafka stream
+# other consumers (rollups for example) or baseline detection can also consume sparse data directly
+sparse_kafka:
+  # Broker address
+  connection_string:
+    bootstrap:
+      servers: "127.0.0.1:9092"
+    enable:
+      idempotence: false
+    queue:
+      buffering:
+        max:
+          messages: 1000
+          kbytes: 104
+          ms: 10
+    message:
+      send:
+        max:
+          retries: 0
+      timeout:
+        ms: 300000
+    compression:
+      codec: 'snappy'
+    delivery:
+      report:
+        only:
+          error: false
+    request:
+      required:
+        acks: 1
+
+  # Number of replicas per topic (created for each measurement)
+  replicas: 1
+  # Number of partitions per topic (created for each measurement)
+  partitions: 1
+  # time in ms for how long the topics retain data
+  retention: 10800000
+  # time in ms (what is a segment ?)
+  segment: 10800000
+
+Druid:
+  connection_string:
+    router_ip: "127.0.0.1"
+    router_port: 8888
+    cc_router_ip: "127.0.0.1"
+    cc_router_port: 8888
+    overlord_ip: "127.0.0.1"
+    overlord_port: 8888
+    read_path: '/druid/v2/sql/'
+    scheme: 'http'
+    # Interval in seconds after which druidadmin reloads the full schema in memory
+    schema_refresh_time: 60
+  datasource:
+    # very aggressive settings to expose any druid limitations
+    maxRowsInMemory: 1000000
+    maxRowsPerSegment: 1000000
+    # Disable early and late message rejection for systest
+    lateMessageRejectionPeriod: null
+    earlyMessageRejectionPeriod: null
+  batch_ingest:
+    # From https://druid.apache.org/docs/latest/ingestion/native-batch.html,
+    # If this value is set to 1, the supervisor task processes data ingestion on
+    # its own instead of spawning worker tasks.
+    maxNumConcurrentSubTasks: 2
+
+schema_creator:
+  # number of workers used by the schema_creator to periodically create the schema
+  num_workers: 1
+  cleanup_on_boot: false
+  druid_topic_prefix: "anomalydb_druid"
+
+# Kafka metric consumer settings
+metric_consumer:
+  kafka_brokers: "127.0.0.1:9092"
+  topic: "metrics"
+  group_prefix: "anomalydb_metric_consumers"
+  num_consumers: 1
+  metric_protocol: "auto"
+  # Flush very often so that we can test some of the metric consumer crash
+  # testcases
+  flush_writes_period_secs: 1
+  whitelist_cluster_uuid:
+  # Messages with timestamp older than this will be logged
+  past_message_lag: 8640000
+  # Messages with timestamp newer than this will be logged
+  future_message_lag: 3600
+
+  redis_host: "localhost"
+  redis_port: 6379
+ 
+recovery_consumer:
+  num_consumers: 1
+
+sparse_batch_consumer:
+  kafka_brokers: "127.0.0.1:9092"
+  topic: "anomalydb_sparse_batch_consumer"
+  group: "anomaly_db_sparse_batch_consumers_group"
+  metric_protocol: graphite
+  num_consumers: 1
+  max_inflight_tasks: 1
+  max_inflight_messages: 1
+  max_messages_to_combine: 2
+  # Fetch tasks for the last N days on consumer assignment
+  num_days_to_fetch_on_assign: 2
+  # Bucket to fetch sparse JSONs from
+  s3_bucket: anomalydb-batch-ingest
+
+dense_batch_consumer:
+  kafka_brokers: "127.0.0.1:9092"
+  topic: "anomalydb_dense_batch_consumer"
+  group: "anomaly_db_dense_batch_consumers_group"
+  num_consumers: 1
+  s3_bucket: jarvis-metrics-lake
+  # Messages with timestamp older than this will be reported through clock
+  # skew. Turning on debug logging will log all such messages
+  past_message_lag: 2592000  # 30d
+  # Messages with timestamp newer than this will be reported through clock
+  # skew. Turning on debug logging will log all such messages
+  future_message_lag: 172800  # 2d
+  # Only convert the following cluster UUIDs. If empty, all clusters are
+  # converted
+  conversion_whitelist: []
+
+# Settings for generating sparse batch messages to kafka
+test_sparse_batch_producer:
+  kafka_brokers: ["127.0.0.1:9092"]
+  topic: "anomalydb_sparse_batch_consumer"
+  num_partitions: 2
+  repl_factor: 1
+  testcases_s3_prefix: s3://anomalydb-batch-ingest/testcases/
+  testcases:
+    tc_5_3_sample:
+      # Both S3 and local testcase files contain the same data but
+      # with a different cluster id
+      s3_cluster_id: batch_ingest_cluster
+      local_cluster_id: batch_ingest_cluster_local
+      start_epoch: 1598313600
+      end_epoch: 1598353320
+      interval: 60
+      datasources: ["batch_rollup_data_source_w_3600",
+                    "batch_rollup_data_source_w_7200",
+                    "batch_tmp_graphite_flat"]
+
+# Settings for generating dense batch messages to kafka
+test_dense_batch_producer:
+  kafka_brokers: ["127.0.0.1:9092"]
+  topic: "anomalydb_dense_batch_consumer"
+  num_partitions: 2
+  repl_factor: 1
+  testcases:
+    tc_5_3_sample:
+      s3_key: 1970-01-01/test_5_3_EA2_10267/test_5_3_EA2_10267/2020-08-25T11-00-00.batch.json/batch.json.gz
+      cluster_id: dense_ingest_cluster1
+      start_epoch: 1598313600
+      end_epoch: 1598353320
+      interval: 60
+
+# Settings for generating test metrics and writing to kafka
+test_metric_producer:
+  kafka_brokers: ["127.0.0.1:9092"]
+  topic: "metrics"
+  # We map the node-id to partition by using node%num_partitions
+  # Note the num_partitions must match the value used to create the topic
+  num_partitions: 10
+  repl_factor: 1
+  # After writing all series for one epoch, the producer will sleep for throttle_time
+  throttle_time: 0
+  # For each series generate num_epochs data points with epoch values in range
+  # [epoch_start, epoch_end]
+  #epoch_start: 1583092800
+  #epoch_end:   1584169200
+  last_hours: 4
+  interval_seconds: 60
+  live: true
+  # A series is per cluster and per node, so total series = num_clusters*num_nodes
+  num_clusters: 2
+  num_nodes: 2
+  # The value of series ranges between [min_value, max_value]
+  min_value: 1000
+  max_value: 2000
+  # The series values are generated using a random walk, where:
+  #  next value = current_value + random(min_change, max_change)
+  min_change: -50
+  max_change: 50
+  use_random_walk: true
+  # Parameters for the metric being generated
+  cluster_tag_key: "cluster"
+  cluster_tag_value_prefix: "f5888c22-9651-4cd0-8e3a-90367d9242c"
+  node_tag_key: "node"
+  node_tag_value_prefix: "RVHMZ321A"
+  # Measurement names starting with this prefix in schema file are assumed to be generated by the test metric producer
+  metric_prefix: 'tmp_'
+  field_prefix: 'field_'
+  num_fields: 10
+  # Do not change the values in the predictable section
+  # the systest assumes these values and checks for the correctness of returned result
+  # any changes here must then be reflected in the computed result that systest verifies
+  predictable:
+    measurement: 'predictable_measurement'
+    fields: 2
+    clusters: 2
+    nodes: 3
+    start_epoch: 1586299980
+    end_epoch:   1586390000
+    interval: 60
+    value_start: 100
+    value_increment: 100
+
+# Settings for reading test metrics
+test_metric_reader:
+  # After running one query, the reader will sleep for this much time in secs
+  throttle_time: 0
+
+  # Settings used for parallelizing queries
+  num_workers: 10
+  max_pending_futures: 10
+
+  # Benchmark type. We support two types:
+  # 1. simple_queries: Queries which need no aggregation
+  # 2. agg_queries: Queries which require aggregation
+  # 3. agg_downsampled_queries: Queries which require aggregation as well as
+  # downsampling
+  benchmark_type: simple_queries
+  # Downsampling interval. Only required for `agg_downsampled_queries'
+  # benchmarks
+  downsampling_interval_mins:
+  # Throttling settings
+  rate_limit: 1
+  sleep_time: 0.1
+  reset_time: 5
+
+  # Epoch ranges to be used while querying. These should be smaller or equal to
+  # those used by test_metric_producer
+  start_epoch: 10
+  end_epoch: 100
+  # These node & process ranges should match those used by test_metric_producer
+  num_nodes: 4
+  num_processes: 1
+  flask_addr: "flask:5000"
+
+  # Name of the metric field
+  measurement: "diamond.process"
+  field_name: "test_field_1"
+  node_tag_key: "node"
+  process_tag_key: "process"
+
+sql_api:
+  # Compute bound workers that execute functions on data returned from store, there is no I/O on these threads
+  workers: 50
+  # These workers execute queries against store and are mostly I/O bound
+  store_read_workers: 500
+  # These workers run queries against the indexing backend and are mostly I/O
+  # bound
+  index_search_workers: 10
+  default_group_by_interval: 60
+  query_cache_size: 1000000
+  # Number of points per series per interval to cache
+  points_per_series:
+    default: 5000
+  cache_provider: "redis"
+  host: "localhost"
+  port: 6379
+  db_id: 0
+  ttl_seconds: 86400
+
+
+flask:
+  port: 5000
+  host: "0.0.0.0"
+  enable_cache: true
+
+logging:
+  # Set to true to only log to console, false if log to file
+  log_to_console: true
+  # Log per metric level details (Extremely verbose, meant only for debugging)
+  log_metrics: true
+  # must be specified when log_to_console is false
+  log_dir: "/mnt/anomalydb/log"
+  # enable debug logging
+  debug: false
+
+telemetry:
+  protocol: influx
+  # We add the environment tag to all metrics
+  environment: test
+  influx:
+    # Interval in seconds at which frequency the metrics are pushed to graphite
+    reporting_interval: 600
+    prefix: "anomalydb"
+    database: "anomalydb-metrics"
+    server: "test.com"
+    port: 80

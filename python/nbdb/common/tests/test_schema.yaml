@@ -1,0 +1,118 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# <measurement name>:
+#  <field name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+# Minimum interval at storage stores, so all data points are aligned to ceiling of this interval
+MIN_STORAGE_INTERVAL: 1
+
+sparse_algos_settings:
+  min_delta: 0.01
+  quantile: .9
+  window_size: 10
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+datasources:
+  cc:
+    # Flat & sharded
+    num_shards: 2
+    shard_tag_key: none
+  
+  internal_metrics:
+
+  machine:
+    user:
+        delta_threshold: 0.01
+    performance:
+
+  sparse_1_2:
+    tf1:
+        delta_threshold: 0.01
+
+  measurement_rather_really_long_measurement_name_1:
+    field_rather_really_long_field_name_too_1:
+
+  measurement_really_long_name_5:
+
+  clusters:
+
+  tsdb:
+
+  m:
+
+  graphite_flat:
+
+  service_1:
+  service_2:
+  service_2.process_1:
+
+  # Dashboard datasource for flat metrics
+  dashboard_queries:
+    num_shards: 2
+    shard_tag_key: tkn1
+  # Dashboard datasource for tagged metrics
+  dashboard_queries_tagged:
+    num_shards: 2
+    shard_tag_key: Cluster
+
+measurement_to_datasource_mapping:
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  graphite:
+    rules:
+      measurement_really_long_name_5: measurement_really_long_name_5
+
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+
+      internal: internal_metrics
+
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: graphite_flat
+
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  influx:
+    rules:
+      measurement_really_long_name_5: measurement_really_long_name_5
+
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: graphite_flat
+
+cross_cluster_patterns:
+  - pattern: service_1.filter_1.*
+    hashkey: tkn3=service_1|tkn4=filter_1
+  - pattern: service_2.process_1.node.stats.*
+    hashkey: tkn3=service_2|tkn4=process_1|tkn5=node|tkn6=stats
+
+# Collocated queries, in future this list will be runtime generated and likely stored in druid itself
+dashboard_queries:
+  clusters:
+    - "ABC"
+    - "c0"
+    - "cluster-uuid-x-y-z"
+  dashboard_queries:
+    - tkn4: ["uptime"]
+      tkns: ["6"]
+      field: ["count"]
+    - tkn3: ["Process"]
+      tkns: ["5"]
+    - tkn3: ["sharded_data_source"]
+      tkn4: ["f_0"]
+      tkns: ["8"]
+      field: ['count']
+  dashboard_queries_tagged:
+    - process_name: ["ksoftirqd/6"]
+      measurement: ["procstat"]
+      field: ["write_count"]

@@ -1,0 +1,36 @@
+# Each rule here must have two attributes:
+#
+# a. `filter`: This represents the Telegraf filter pattern to be used to
+# determine if the rule can be used for a given metric. Please DO NOT include
+# "clusters.*.*" at the beginning because that will be automatically generated
+# for you
+#
+# b. `tag_rule`: This represents how the tags are to be extracted. For example,
+# if the metric is "Diamond.process.ProcName.cpu_percent" and the tag_rule is
+# "measurement.measurement.process.field", the extracted result will be:
+# 
+# measurement=Diamond.process
+# process=ProcName
+# field=cpu_percent
+#
+# Other recommendations:
+# 1. Please add a few metrics as examples on top of your rule. Makes it easier
+# to verify manually if the rule is sane
+#
+# 2. Please add section markers for each unique measurement
+
+#####################################
+# Measurement: SVC_NAME.metric_name
+#####################################
+
+# svc_name.metric_name.selector_name.filter_01.<type_name>.field_name
+- filter: "svc_name.metric_name.selector_name.filter_01.*.*"
+  tag_rule: "measurement.measurement.field.field.type_name.field"
+
+# svc_name.metric_name.selector_name.filter_02.<type_name>
+- filter: "svc_name.metric_name.selector_name.filter_02.*"
+  tag_rule: "measurement.measurement.field.field.field.type_name"
+
+# svc_name.metric_name.selector_name.filter_03.<type_name>
+- filter: "svc_name.metric_name.selector_name.filter_03.*"
+  tag_rule: "measurement.measurement.field.field.field.type_name"

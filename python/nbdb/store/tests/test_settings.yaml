@@ -1,0 +1,76 @@
+# Sparse store related settings
+sparse_store:
+  # Number of data point keys in a single partition
+  partition_size: 3
+  # If true we transform the data by applying some streaming functions like non-negative-derivatives
+  # this is not prod ready and meant for running benchmarks to estimate the value
+  enable_stream_transforms: true
+  # If True we use the druid as a backend instead of elastic and scylladb
+  druid_mode: True
+
+  rollups:
+    report_clock_skew: true
+
+  sparse_telemetry:
+    # Log metrics which are dropping less than this threshold.
+    # Range: 0.0 to 1.0
+    drop_ratio_log_threshold: 0
+    gen_sparse_data_distribution: false
+
+  # Stats related settings
+  stats:
+    # How many stats objects are cached in memory
+    cache_size: 10000000
+    telemetry_report_interval_seconds: 1800
+
+  heartbeat_scan:
+    interval: 6000
+    # A missing point marker is added if the current datapoint is not within
+    # `data_gap_detection_interval` seconds of the previous datapoint
+    data_gap_detection_interval: 6000
+    # A series is terminated and a tombstone marker is added if no datapoints
+    # are seen within `termination_detection_interval` seconds
+    termination_detection_interval: 12000
+
+# We allow the ability to "trace" certain metrics. The tracing config is
+# periodically pulled from an S3 location
+tracing_config:
+  s3_bucket:
+  s3_key:
+  # We check S3 ever `refresh_interval` seconds to see if a new config was
+  # uploaded
+  refresh_interval: 600
+
+realtime_metric_consumer:
+  mode: "realtime"
+  topic: "metrics"
+  metric_protocol: graphite
+  whitelist_cluster_uuid:
+  # Messages with timestamp older than this will be logged
+  past_message_lag: 8640000
+  # Messages with timestamp newer than this will be logged
+  future_message_lag: 3600
+
+rollup_metric_consumer:
+  mode: "rollup"
+  topic: "metrics"
+  metric_protocol: graphite
+  whitelist_cluster_uuid:
+  # Messages with timestamp older than this will be logged
+  past_message_lag: 8640000
+  # Messages with timestamp newer than this will be logged
+  future_message_lag: 3600
+
+
+sparse_kafka:
+  connection_string:
+    brokers: ['localhost:9123']
+  write_workers: 1
+
+batch_writers:
+  workers: 1
+
+logging:
+  log_to_console: true
+  log_metrics: true
+  debug: true

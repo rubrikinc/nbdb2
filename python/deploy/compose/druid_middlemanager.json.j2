@@ -1,0 +1,43 @@
+[
+	{
+		"name": "druid_middlemanager", 
+		"essential": true, 
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 1024, 
+		"memoryReservation": 30000,
+		"portMappings": [
+			{
+				"protocol": "tcp", 
+				"containerPort": 8091, 
+				"hostPort": 8091
+			}
+		], 
+		"mountPoints": [
+			{
+				"sourceVolume": "volume-0",
+				"readOnly": true,
+				"containerPath": "/dev"
+			}
+		],
+		"entryPoint": [
+			"/opt/druid/bin/supervise",
+			"-c", 
+			"conf/supervise/middlemanager.conf"
+		], 
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 65536,
+				"hardLimit": 65536
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs", 
+			"options": {
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}", 
+				"awslogs-group": "AnomalyDB-druid-middlemanager-{{ mode }}"
+			}
+		} 
+	}
+] 

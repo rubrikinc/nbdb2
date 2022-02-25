@@ -1,0 +1,70 @@
+druid.service=druid/middlemanager
+druid.port=8091
+
+# Number of tasks per middleManager
+druid.worker.capacity={{ slots_capacity }}
+# Category name which can used to create an affinity map pinning certain
+# datasources to certain MMs. We use two categories: regular, crosscluster
+druid.worker.category={{ mm_category }}
+
+# Task launch parameters
+# Total memory available to middle manager is 32 GB
+#
+# For cluster sharded datasources,
+# Memory per task = 1.7 GB
+# Max Memory used for all tasks = 1.7 GB x 24 = 40.8 GB
+#
+# For cross-cluster datasources,
+# Memory per task = 7.5 GB
+# Max Memory used for all tasks = 7.5 GB x 4 = 30 GB
+#
+# We are overprovisioning memory a bit because in practice, Druid tasks end up
+# using only 100-200 MB of their 700 MB Direct Memory allocation
+druid.indexer.runner.javaOpts=-server -Xmx{{ heap_max_size }}
+-XX:MaxDirectMemorySize={{ max_direct_mem }} -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:+ExitOnOutOfMemoryError -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Dlog4j.configurationFile=/opt/imply/conf/druid/_common/log4j2.xml
+druid.indexer.task.baseTaskDir=var/druid/task
+druid.indexer.task.restoreTasksOnRestart=true
+
+# HTTP server threads
+druid.server.http.numThreads={{ num_server_threads }}
+
+# Processing threads and buffers
+# The amount of direct memory needed by Druid is at least
+# druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1).
+# You can ensure at least this amount of direct memory is available by
+# providing -XX:MaxDirectMemorySize=<VALUE> in druid.indexer.runner.javaOptsArray as documented above.
+#
+# For cluster sharded datasources,
+# 100000000*(2+2+1) = 500 MB
+#
+# For cross-cluster datasources,
+# 500000000*(2+4+1) = 3.5 GB
+druid.indexer.fork.property.druid.processing.buffer.sizeBytes={{ processing_buffer_size_bytes }}
+druid.indexer.fork.property.druid.processing.numMergeBuffers=2
+druid.indexer.fork.property.druid.processing.numThreads={{ processing_threads }}
+druid.indexer.fork.property.druid.processing.tmpDir=var/druid/processing
+
+# Hadoop indexing
+druid.indexer.task.hadoopWorkingPath=var/druid/hadoop-tmp
+druid.indexer.task.defaultHadoopCoordinates=["org.apache.hadoop:hadoop-client:2.8.5", "org.apache.hadoop:hadoop-aws:2.8.5"]
+
+# Disable lookups on middlemanagers. When the coordinator is under heavy load,
+# it is possible that the first MM lookup sync fails and it waits another 60s
+# for the sync to pass. While the MM is waiting, the overlord decides that the
+# MM is unresponsive and the task gets killed.
+#
+# The overlord logs look like the following:
+# "org.apache.druid.indexing.common.IndexTaskClient - Retries exhausted for []"
+# "Task [] failed to return start time"
+# "Shutdown [] because: [Task [] failed to return start time, killing task]"
+#
+# We don't have any lookups on AnomalyDB right now, so this should be OK. In
+# the worst case, we will have lookups not working on the latest data being
+# held by MMs.
+druid.lookup.enableLookupSyncOnStartup=false
+
+druid.realtime.cache.useCache={{ use_cache }}
+druid.realtime.cache.populateCache={{ populate_cache }}
+# Max segment size to be cached is 300 MB
+druid.realtime.cache.maxEntrySize=300000000
+druid.cache.sizeInBytes={{ cache_size_in_bytes }}

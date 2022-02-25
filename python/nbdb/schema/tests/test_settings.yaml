@@ -1,0 +1,35 @@
+sparse_store:
+  sparse_algos:
+    min_delta: 0.01
+
+sql_api:
+  index_search_workers: 2
+  default_group_by_interval: 60
+
+elasticsearch:
+  # Connection configuration
+  connection: 
+    host: "localhost"
+    port: 9200
+    region:
+    aws_access_key_id:
+    aws_secret_access_key:
+
+  # Index configuration
+  index:
+    index_prefix: "metrics_indexing"
+    num_replicas: 1
+    num_shards: 1
+    recreate_index_template: true
+
+  # Batch write settings
+  writes:
+    queue_size: 1000000
+    # We only want to allow 100 items / sec. Note that this rate limit applies to
+    # number of documents, and not the number of batches
+    rate_limit: 100
+    # We will try to batch writes using the following batch size
+    batch_size: 10000
+    batch_write_timeout_secs: 180
+    ratelimit_sleep_time: 0.1
+    ratelimit_reset_time: 1

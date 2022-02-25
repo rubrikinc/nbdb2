@@ -1,0 +1,48 @@
+[
+	{
+		"name": "druid_historical", 
+		"essential": true,
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 1024, 
+		"memoryReservation": 1024, 
+		"entryPoint": [
+			"/opt/druid/bin/supervise",
+			"-c", 
+			"conf/supervise/historical.conf"
+		], 
+		"portMappings": [
+			{
+				"protocol": "tcp", 
+				"containerPort": 8083, 
+				"hostPort": 8083
+			}
+		], 
+		"mountPoints": [
+			{
+				"sourceVolume": "volume-0", 
+				"readOnly": false, 
+				"containerPath": "/mnt-hdd"
+			},
+			{
+				"sourceVolume": "volume-1",
+				"readOnly": true,
+				"containerPath": "/dev"
+			}
+		], 
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 65536,
+				"hardLimit": 65536
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs", 
+			"options": {
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}", 
+				"awslogs-group": "AnomalyDB-druid-historical-{{ mode }}"
+			}
+		} 
+	}
+]

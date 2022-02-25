@@ -1,0 +1,43 @@
+[
+	{
+		"name": "druid_overlord",
+		"essential": true,
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 512,
+		"memoryReservation": 10240,
+		"entryPoint": [
+			"/opt/druid/bin/supervise",
+			"-c",
+			"conf/supervise/overlord.conf"
+		],
+		"portMappings": [
+			{
+				"hostPort": 8090,
+				"protocol": "tcp",
+				"containerPort": 8090
+			}
+		],
+		"mountPoints": [
+			{
+				"sourceVolume": "volume-0",
+				"readOnly": true,
+				"containerPath": "/dev"
+			}
+		],
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 65536,
+				"hardLimit": 65536
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs",
+			"options": {
+				"awslogs-group": "AnomalyDB-druid-overlord-{{ mode }}",
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}"
+			}
+		}
+	}
+]

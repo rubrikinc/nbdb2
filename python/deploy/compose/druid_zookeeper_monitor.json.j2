@@ -1,0 +1,19 @@
+[
+	{
+		"name": "druid_zookeeper_monitor",
+		"essential": true,
+		"image": "{{ anomalydb_image_repo }}:{{ image_tag }}",
+		"cpu": 512,
+		"memoryReservation": 1024,
+		"entryPoint": ["python"],
+		"command": [ "nbdb/utils/zookeeper-monitor.py", "--nodes={{ zookeeper_ips }}" ],
+		"logConfiguration": {
+			"logDriver": "awslogs",
+			"options": {
+				"awslogs-group": "AnomalyDB-druid-zookeeper-monitor-{{ mode }}",
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}"
+			}
+		}
+	}
+]

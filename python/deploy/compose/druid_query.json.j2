@@ -1,0 +1,54 @@
+[
+	{
+		"name": "druid_query", 
+		"essential": true,
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 1024,
+		"memoryReservation": 12800,
+		"privileged": true,
+		"entryPoint": [
+			"/opt/druid/bin/supervise",
+			"-c", 
+			"conf/supervise/query.conf"
+		], 
+		"portMappings": [
+			{
+				"protocol": "tcp", 
+				"containerPort": 8888, 
+				"hostPort": 8888
+			}, 
+			{
+				"protocol": "tcp", 
+				"containerPort": 8082, 
+				"hostPort": 8082
+			}, 
+			{
+				"protocol": "tcp", 
+				"containerPort": 80, 
+				"hostPort": 80
+			}
+		], 
+		"mountPoints": [
+			{
+				"sourceVolume": "volume-0",
+				"readOnly": true,
+				"containerPath": "/dev"
+			}
+		],
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 16384,
+				"hardLimit": 16384
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs", 
+			"options": {
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}", 
+				"awslogs-group": "AnomalyDB-druid-query-{{ mode }}"
+			}
+		} 
+	}
+]

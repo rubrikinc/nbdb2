@@ -1,0 +1,36 @@
+druid.service=druid/broker
+druid.port=8082
+
+# HTTP server settings
+druid.server.http.numThreads={{ num_threads }}
+
+# HTTP client settings
+druid.broker.http.numConnections={{ num_connections }}
+# You can generally set this to a value of approximately 2MB * number of
+# Historicals. As your cluster scales up with more Historicals and Tasks,
+# consider increasing this buffer size and increasing the Broker heap
+# accordingly
+druid.broker.http.maxQueuedBytes={{ max_queued_bytes }}
+
+# Processing threads and buffers
+# The amount of direct memory needed by a broker is at least
+# druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers +
+# druid.processing.numThreads + 1).
+# You can ensure at least this amount of direct memory is available by
+# providing -XX:MaxDirectMemorySize=<VALUE> in the broker's jvm.config
+# 512 MB * (8+2+1) = 5.5 GB
+druid.processing.buffer.sizeBytes={{ processing_buffer_size_bytes }}
+druid.processing.numMergeBuffers={{ processing_num_merge_buffers }}
+druid.processing.numThreads={{ processing_num_threads }}
+druid.processing.tmpDir=var/druid/processing
+
+# Query cache disabled -- push down caching and merging instead
+druid.broker.cache.useCache={{ use_cache }}
+druid.broker.cache.populateCache={{ populate_cache }}
+
+# SQL
+druid.sql.enable={{ sql_enable }}
+
+# Monitoring
+druid.monitoring.monitors=["org.apache.druid.java.util.metrics.JvmMonitor", "org.apache.druid.java.util.metrics.SysMonitor", "org.apache.druid.server.metrics.QueryCountStatsMonitor"]
+

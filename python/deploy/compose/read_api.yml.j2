@@ -1,0 +1,35 @@
+version: '2'
+services:
+  read_api:
+    image: {{ anomalydb_image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/api/home.py", 
+      "--setting_file=nbdb/config/{{ config_file }}", 
+      "--schema_mapping=default:nbdb/config/{{ schema_file }}",
+      "--schema_mapping=batch:nbdb/config/{{ batch_schema_file }}"
+    ]
+    ports:
+      - "5000"
+    cpu_shares: 5120
+    # Reserving 58 GB of memory per Flask app. We need it to be able to handle
+    # creating responses for large queries
+    mem_reservation: 62277025792
+    # Also add a hard mem limit of 58 GB to avoid having the EC2 instance
+    # become unresponsive
+    mem_limit: 62277025792
+    environment:
+      - S3_ENV_PATH=
+      - HOST_URL=https://anomalydb.rubrik.com
+      - ANOMALYDB_SECRETS_BUCKET={{ anomalydb_secret_bucket }}
+      - ANOMALYDB_SECRETS_OBJECT={{ anomalydb_secret_object }}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-flask-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

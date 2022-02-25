@@ -1,0 +1,17 @@
+version: '2'
+services:
+  indexing_consumer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/indexing_consumer/indexing_consumer_app.py",
+      "--setting_file=nbdb/config/settings_prod.yaml"
+      ]
+    cpu_shares: 1024
+    mem_reservation: 1024m
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-indexing-consumer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

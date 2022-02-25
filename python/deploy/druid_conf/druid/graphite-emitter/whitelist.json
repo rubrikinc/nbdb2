@@ -1,0 +1,129 @@
+{
+  "ingest/events/processed": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/events/unparseable": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/events/processedWithError": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/events/messageGap": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/handoff/count": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/handoff/failed": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/kafka/lag": [
+    "dataSource"
+  ],
+  "ingest/kafka/avgLag": [
+    "dataSource"
+  ],
+  "ingest/kafka/maxLag": [
+    "dataSource"
+  ],
+  "ingest/merge/time": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/persists/backPressure": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/persists/time": [
+    "dataSource",
+    "taskType"
+  ],
+  "ingest/rows/output": [
+    "dataSource",
+    "taskType"
+  ],
+  "jetty/numOpenConnections": [],
+  "jvm/gc/count": [
+    "gcName",
+    "gcGen"
+  ],
+  "jvm/gc/cpu": [
+    "gcName",
+    "gcGen"
+  ],
+  "jvm/mem/max": [
+    "memKind"
+  ],
+  "jvm/mem/used": [
+    "memKind"
+  ],
+  "query/count": [],
+  "query/success/count": [],
+  "query/failed/count": [],
+  "query/interrupted/count": [],
+  "segment/count": [
+    "dataSource"
+  ],
+  "segment/dropQueue/count": [
+    "server"
+  ],
+  "segment/loadQueue/size": [
+    "server"
+  ],
+  "segment/loadQueue/count": [
+    "server"
+  ],
+  "segment/loadQueue/failed": [
+    "server"
+  ],
+  "segment/scan/pending": [],
+  "segment/size": [
+    "dataSource"
+  ],
+  "segment/unavailable/count": [
+    "dataSource"
+  ],
+  "segment/underReplicated/count": [
+    "tier",
+    "dataSource"
+  ],
+  "segment/usedPercent": [
+    "dataSource",
+    "tier",
+    "priority"
+  ],
+  "sys/la/1": [],
+  "sys/mem/actual/free": [],
+  "sys/mem/actual/used": [],
+  "sys/net/inbound": [],
+  "sys/net/outbound": [],
+  "sys/storage/used": [
+    "fsDirName"
+  ],
+  "task/run/time": [
+    "dataSource",
+    "taskType",
+    "taskStatus"
+  ],
+  "task/success/count": [
+    "dataSource"
+  ],
+  "task/failed/count": [
+    "dataSource"
+  ],
+  "task/running/count": [
+    "dataSource"
+  ],
+  "task/pending/count": [
+    "dataSource"
+  ],
+  "task/waiting/count": [
+    "dataSource"
+  ]
+}

@@ -1,0 +1,14 @@
+# Used for batch_converter unit tests
+# Add separate filter rules for Influx and Graphite
+graphite:
+  blacklist_rules: []
+  whitelist_rules:
+    - "service_1.*"
+    - "service_2.*"
+    - "Service.*"
+    - "metric_service.*"
+    - "clusterwide.metric_service.*"
+
+influx:
+  blacklist_rules: []
+  whitelist_rules: ["*"]

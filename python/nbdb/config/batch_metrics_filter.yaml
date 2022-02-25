@@ -1,0 +1,19 @@
+# Whitelist rules used for systest
+# Add separate whitelist rules for Influx and Graphite
+graphite:
+  # Each section can have blacklist rules & whitelist rules.
+  # For a metric to be allowed through, it must not match any blacklist rules
+  # AND should match some whitelist rule
+  blacklist_rules: []
+  whitelist_rules:
+    - "service_1.*"
+    - "service_2.*"
+    - "metric_service.*"
+    - "clusterwide.metric_service.*"
+
+# TODO: Enable fine-grained rules for Influx based on measurement, field & tags
+influx:
+  blacklist_rules: []
+  whitelist_rules:
+    # Allow all metrics
+    - "*"

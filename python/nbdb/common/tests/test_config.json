@@ -1,0 +1,1 @@
+{"schema_version":"1","attributes":{"duplicate_pct":{"hosts":["172.31.1.*","1.2.3.4"],"val_match":"25","val_nomatch":"0"},"default_optimize_lookback":{"hosts":[".*"],"val_match":"1","val_nomatch":"0"},"non_marker_lookback_val_allowed_gap_pct":{"hosts":["10.*"],"val_match":"1","val_nomatch":"0"},"deprecated_var":{"hosts":[],"val_match":"1","val_nomatch":"0"}}}

@@ -1,0 +1,152 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# <measurement name>:
+#  <f name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+sparse_algos:
+  - algo: "SparseAlgoLossLess"
+    pattern: [".*count$", ".*uptime.*"]
+  - algo: "SparseAlgoPercentileWindowDelta"
+    pattern: [".*p\\d+$"]
+    min_delta: 0.0001
+    quantile: .9
+    window_size: 10
+  - algo: "SparseAlgoLastValueDelta"
+    min_delta: 0.0001
+  - algo: "SparseAlgoOutlierType"
+    pattern: [".*outlier", ".*.Diamond.process.p_1.m_1", ".*p_2.m_2"]
+    min_delta: 0.01
+    bin_count: 1000
+    band_computation_points: 1000
+    max_band_width: 0.05
+    min_band_probability: 0.01
+    min_band_probability_change: 0.001
+    drop_before_ready: true
+    report_aggregated_stats: true
+
+sparse_algos_settings:
+  min_delta: 0.01
+  quantile: .9
+  window_size: 10
+
+transforms:
+  non_negative_derivative:
+    include_regex: [".*\\.count$"]
+    exclude_regex: []
+    suffix: "t_meter"
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+sparseness_disabled_patterns:
+  - pattern:
+      tkn3: Diamond
+      tkn4: m_1
+      field: seconds
+    interval: 600
+  - pattern:
+      tkn3: Diamond
+      tkn4: service
+      tkn5: '*DB'
+      field: m_2
+    interval: 1200
+  - pattern:
+      tkn3: service_1
+      tkn4: process_1
+      field: '*'
+    interval: 60
+
+cross_cluster_patterns:
+  - pattern: service_1.Fileset.*
+    hashkey: tkn3=service_1|tkn4=Fileset
+  - pattern: Diamond.process_1.Node.Status.*
+    hashkey: tkn3=Diamond|tkn4=process_1|tkn5=Node|tkn6=Status
+  - pattern: service_3.process_2.task_1.Errors.count
+    hashkey: tkn3=service_3|tkn4=process_2
+  - pattern: service_3.process_2.task_1.Errors.x*
+    hashkey: tkn3=service_3|tkn4=process_2
+
+datasources:
+  cc:
+    # Flat & sharded
+    num_shards: 2
+    shard_tag_key: none
+  m1:
+    num_shards: 5
+    shard_tag_key: m1_shard_tag
+    f1:
+      delta_threshold: 0.1
+
+  m2:
+    num_shards: 2
+    shard_tag_key: m2_shard_tag
+    f2:
+      down_sampling: 'max'
+
+  m4:
+
+  m5:
+    f3:
+
+  rollup_clusters_sharded_ds:
+    num_shards: 2
+    # Sharded by cluster ID
+    shard_tag_key: tkn1
+
+  rollup_non_sharded_ds:
+
+  rollup_Diamond_sharded_ds:
+    num_shards: 2
+    # Sharded by node ID
+    shard_tag_key: tkn2
+
+  rollup_catchall:
+
+  graphite_flat:
+
+  rollup_catchall:
+
+
+measurement_to_datasource_mapping:
+  graphite:
+    rules:
+      a.b.c: m1
+      a.b: m2
+      a.b.c.d.e: m4
+      a: m4
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: graphite_flat
+
+# rollup data source mapping
+rollups:
+  windows: [3600, 7200]
+  rollup_datasource_match_rules:
+    # Special rollup datasource for Diamond metrics. Diamond metrics will have
+    # tkn3=Diamond
+    - match_tag_key: tkn3
+      match_tag_value: Diamond
+      datasource: rollup_Diamond_sharded_ds
+
+    # Rollup datasource sharded by cluster ID for metrics beginning with
+    # "clusters"
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_clusters_sharded_ds
+
+    # Non-sharded datasource for any metrics not beginning with clusters
+    - match_tag_key: tkn0
+      datasource: rollup_non_sharded_ds
+
+  # All metrics without cluster id definition goto catch_all_datasource
+  catch_all_datasource: rollup_catchall
+
+  # Default rollup algorithm to use
+  default_algo: "mean"
+  # Regex rules to match the rollup algorithm
+  algos:
+    last: ["count$"]
+    max: ["p\\d+$"]

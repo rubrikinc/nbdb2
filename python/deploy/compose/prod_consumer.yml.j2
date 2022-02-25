@@ -1,0 +1,20 @@
+version: '2'
+services:
+  metric_consumer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/metric_consumer/metric_consumer_app.py",
+      "--consumer_mode={{ consumer_mode }}",
+      "--setting_file=nbdb/config/{{ config_file }}",
+      "--schema_mapping=default:nbdb/config/{{ schema_file }}"
+      ]
+    cpu_shares: 1024
+    mem_reservation: {{ mem_reservation }}
+    mem_limit: {{ mem_limit }}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-metric-consumer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

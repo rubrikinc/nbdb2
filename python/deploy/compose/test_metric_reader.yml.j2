@@ -1,0 +1,18 @@
+version: '2'
+services:
+  metric_producer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/load_simulator/test_metric_reader.py",
+      "--setting_file=nbdb/config/settings_prod.yaml",
+      "--schema_mapping=default:nbdb/config/schema_prod.yaml"
+      ]
+    cpu_shares: 1
+    mem_reservation: 1024m
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-metric-producer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

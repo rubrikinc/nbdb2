@@ -1,0 +1,24 @@
+version: '2'
+services:
+  metric_consumer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/metric_consumer/metric_consumer_app.py",
+      "--setting_file=nbdb/config/{{ config_file }}",
+      "--schema_mapping=default:nbdb/config/{{ schema_file }}"
+      ]
+    cpu_shares: 1024
+    # Reserving 5 GB of memory per container to ensure we allot one container
+    # per EC2 instance. Having a full EC2 instance to itself allows the
+    # container to cache stats objects safely without worrying about OOM
+    mem_reservation: 5368709120
+    # Use a memory limit of 6.5 GB to avoid EC2 instance becoming unresponsive
+    # due to memory pressure
+    mem_limit: 6979321856
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-metric-consumer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

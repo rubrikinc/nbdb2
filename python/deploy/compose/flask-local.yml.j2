@@ -1,0 +1,15 @@
+version: '2'
+services:
+  anomalydb:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: ["nbdb/api/home.py"]
+
+    container_name: anomalydb
+    hostname: anomalydb
+    environment:
+      - S3_ENV_PATH=
+    ports:
+      - "5000:5000"
+    cpu_shares: 1024
+    mem_reservation: 1024m

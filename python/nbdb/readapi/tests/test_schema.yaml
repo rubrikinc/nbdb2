@@ -1,0 +1,110 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# <measurement name>:
+#  <field name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+# Minimum interval at storage stores, so all data points are aligned to ceiling of this interval
+MIN_STORAGE_INTERVAL: 1
+
+sparse_algos_settings:
+  min_delta: 0.01
+  quantile: .9
+  window_size: 10
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+sparseness_disabled_patterns:
+  - pattern:
+      tkn3: Diamond
+      field: num_fds
+    interval: 600
+  - pattern:
+      tkn3: service_1
+      tkn4: process_1
+      field: '*'
+    interval: 60
+
+datasources:
+  machine:
+    user:
+        delta_threshold: 0.01
+    performance:
+
+  measurement_really_long_name_5:
+
+  sparse_1_2:
+    tf1:
+        delta_threshold: 0.01
+
+  measurement_rather_really_long_measurement_name_1:
+    field_rather_really_long_field_name_too_1:
+
+  clusters:
+
+  tsdb:
+
+  m:
+
+  graphite_flat:
+
+  service_1:
+  service_2:
+  service_2.process_1:
+  Diamond:
+
+  rollup_data_source:
+    num_shards: 2
+    shard_tag_key: tkn1
+    windows: [3600, 7200]
+  rollup_catchall:
+    windows: [3600, 7200]
+
+measurement_to_datasource_mapping:
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  graphite:
+    rules:
+      measurement_really_long_name_5: measurement_really_long_name_5
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+      Diamond: Diamond
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: graphite_flat
+
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  influx:
+    rules:
+      measurement_really_long_name_5: measurement_really_long_name_5
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+      Diamond: Diamond
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: graphite_flat
+
+# rollup data source mapping
+rollups:
+  windows: [3600, 7200]
+  rollup_datasource_match_rules:
+    # All Graphite metrics beginning with "clusters" go to this sharded
+    # datasource.
+    # NOTE: The tag_key prefix should match TOKEN_TAG_PREFIX in data_point.py
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_data_source
+
+  # All metrics without cluster id definition goto catch_all_datasource
+  catch_all_datasource: rollup_catchall
+  # Default rollup algorithm to use
+  default_algo: "mean"
+  # Regex rules to match the rollup algorithm
+  algos:
+    last: [".*count$"]
+    max: [".*p99"]

@@ -1,0 +1,49 @@
+# Copied from the link below with minor modifications:
+# https://github.com/implydata/distribution-docker/blob/master/Dockerfile
+FROM ubuntu:20.04
+
+# Prepare OS
+COPY setup-os.sh /root
+RUN /root/setup-os.sh
+
+# Copy package from build directory
+ARG DRUID_VERSION="0.22.1"
+ARG DRUID_PKG="apache-druid-$DRUID_VERSION"
+
+RUN wget https://dlcdn.apache.org/druid/$DRUID_VERSION/apache-druid-$DRUID_VERSION-bin.tar.gz && \
+  tar -xzf $DRUID_PKG-bin.tar.gz && \
+  cp -r $DRUID_PKG /opt/$DRUID_PKG
+
+RUN mkdir -p /mnt/druid/var && \
+  ln -snf /mnt/druid/var /opt/$DRUID_PKG/var && \
+  ln -snf /opt/$DRUID_PKG /opt/druid
+
+# Pull the druid-influxdb-emitter extension & its dependencies
+RUN java -cp "/opt/druid/lib/*" \
+      -Ddruid.extensions.directory="/opt/druid/extensions" \
+      org.apache.druid.cli.Main tools pull-deps -c \
+      org.apache.druid.extensions.contrib:druid-influxdb-emitter:$DRUID_VERSION
+  
+# Override the default config files if any
+ADD druid_conf /opt/druid/conf
+
+# Need to create special directory & entrypoint script for Zookeeper
+RUN mkdir -p /data/zookeeper
+ADD zookeeper-entrypoint.py /zookeeper-entrypoint.py
+
+# Ports we use:
+# 2181 - Zookeeper port
+# 2888 - Zookeeper leader port
+# 3888 - Zookeeper election port
+# 8081 - Coordinator plaintext port
+# 8082 - Broker node plaintext port
+# 8083 - Historical node plaintext port
+# 8090 - Overlord plaintext port
+# 8091 - Middlemanager plaintext port
+# 8888 - Router plaintext port
+EXPOSE 1527 2181 2888 3888 8081 8082 8083 8090 8091 \
+  8100 8101 8102 8103 8104 8105 8106 8107 8108 8109 8110 8200 9095
+
+WORKDIR /opt/$DRUID_PKG
+
+CMD ["bin/supervise", "-c", "conf/supervise/single-server/nano-quickstart.conf"]

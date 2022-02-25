@@ -1,0 +1,5 @@
+clusters.uuid-x-y-z.cluster_name.process_01.svc_01.job_01.metric_01.Bytes.count
+clusters.uuid-x-y-z.cluster_name.process_01.svc_01.job_01.metric_02.count
+clusters.uuid-x-y-z.cluster_name.process_02.svc_02.job_02.metric_03.time_span_01.total
+clusters.uuid-x-y-z.cluster_name.process_03.svc_03.metric_04.count
+clusters.uuid-x-y-z.cluster_name.process_04.svc_03.parent_job.child_job.metric_05.count

@@ -1,0 +1,4 @@
+"aliasSub(aliasSub(sortByName(groupByNode(aliasSub(sumSeriesWithWildcards(clusters.$Cluster.$Node.Diamond.version.*.*.*, 2), '(\\d+)\\.(\\d+)\\.(.*)$', '\\1!\\2!\\3'), 4, 'sum')), '#(.*)#', ''), '!', '.')",
+"countSeries(groupByNode(clusters.$Cluster.$Node.Diamond.uptime.seconds, 2, 'sum'))"
+"sumSeries(averageSeriesWithWildcards(clusters.$Cluster.$Node.Diamond.stats.Stats.Stat.*, 2))"
+"limit(clusters.$Cluster.$Node.Diamond.stats.service.process.Count, 1)"

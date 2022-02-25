@@ -1,0 +1,18 @@
+version: '2'
+services:
+  metric_consumer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/batch_consumer/sparse_batch_consumer_app.py",
+      "--setting_file=nbdb/config/{{ config_file }}",
+      "--schema_mapping=default:nbdb/config/{{ schema_file }}"
+      ]
+    cpu_shares: 1024
+    mem_reservation: 1024m
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-sparse-batch-consumer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

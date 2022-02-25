@@ -1,0 +1,43 @@
+[
+	{
+		"name": "druid_coordinator",
+		"essential": true,
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 512,
+		"memoryReservation": 1024,
+		"entryPoint": [
+			"/opt/druid/bin/supervise",
+			"-c",
+			"conf/supervise/coordinator.conf"
+		],
+		"portMappings": [
+			{
+				"hostPort": 8081,
+				"protocol": "tcp",
+				"containerPort": 8081
+			}
+		],
+		"mountPoints": [
+			{
+				"sourceVolume": "volume-0",
+				"readOnly": true,
+				"containerPath": "/dev"
+			}
+		],
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 65536,
+				"hardLimit": 65536
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs",
+			"options": {
+				"awslogs-group": "AnomalyDB-druid-coordinator-{{ mode }}",
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}"
+			}
+		}
+	}
+]

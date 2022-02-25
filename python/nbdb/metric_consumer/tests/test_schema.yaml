@@ -1,0 +1,121 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# <measurement name>:
+#  <field name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+# Minimum interval at storage stores, so all data points are aligned to ceiling of this interval
+MIN_STORAGE_INTERVAL: 1
+
+# Test Metric Producer Schema
+sparse_algos:
+  - algo: "SparseAlgoLossLess"
+    pattern: [".*count$", ".*uptime.*"]
+  - algo: "SparseAlgoPercentileWindowDelta"
+    pattern: [".*p\\d+$"]
+    min_delta: 0.0001
+    quantile: .9
+    window_size: 10
+  - algo: "SparseAlgoLastValueDelta"
+    min_delta: 0.0001
+  - algo: "SparseAlgoOutlierType"
+    pattern: [".*outlier", ".*.D.p.DB.cpu_percent", ".*Network.*tcp_retransmits"]
+    min_delta: 0.01
+    bin_count: 1000
+    band_computation_points: 1000
+    max_band_width: 0.05
+    min_band_probability: 0.01
+    min_band_probability_change: 0.001
+    drop_before_ready: true
+    report_aggregated_stats: true
+
+sparse_algos_settings:
+  min_delta: 0.001
+  quantile: .9
+  window_size: 10
+
+transforms:
+  non_negative_derivative:
+    include_regex: [".*\\.count$"]
+    exclude_regex: []
+    suffix: "t_meter"
+
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+# Data sources created in druid
+datasources:
+  # auto generated data by TMP
+  tmp_measurement_1:
+  predictable_measurement:
+
+  # Catch all for all graphite flat metrics
+  tmp_graphite_flat:
+
+  service_1: service_1
+  service_2: service_2
+  service_2.process_1: service_2.process_1
+
+  rollup_data_source:
+    num_shards: 2
+    shard_tag_key: tkn1
+    windows: [3600, 7200]
+
+  rollup_catchall:
+    windows: [3600, 7200]
+
+measurement_to_datasource_mapping:
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  graphite:
+    rules:
+      tmp_measurement_1: tmp_measurement_1
+      predictable_measurement: predictable_measurement
+
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: tmp_graphite_flat
+
+  # We will use the same prefix rules for Graphite & Influx to make testing
+  # easier
+  influx:
+    rules:
+      tmp_measurement_1: tmp_measurement_1
+      predictable_measurement: predictable_measurement
+
+      service_1: service_1
+      service_2: service_2
+      service_2.process_1: service_2.process_1
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: tmp_graphite_flat
+
+# rollup data source mapping
+rollups:
+  # Rollup windows
+  windows: [3600, 7200]
+  rollup_datasource_match_rules:
+    # All Graphite metrics beginning with "clusters" go to this sharded
+    # datasource.
+    # NOTE: The tag_key prefix should match TOKEN_TAG_PREFIX in data_point.py
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_data_source
+      # We will shard on the basis of cluster id which is the second token for
+      # flat Graphite metrics
+      shard_tag_key: tkn1
+
+  # All metrics without cluster id definition goto catch_all_datasource
+  catch_all_datasource: rollup_catchall
+  # Default rollup algorithm to use
+  default_algo: "mean"
+  # Regex rules to match the rollup algorithm
+  algos:
+    last: [".*count$"]
+    max: [".*p99"]

@@ -1,0 +1,25 @@
+sparse_batch_consumer:
+  kafka_brokers: ""
+  topic: "test-topic"
+  group: ""
+  metric_protocol: graphite
+  num_consumers: 1
+  max_inflight_tasks: 1
+  max_inflight_messages: 1
+  max_messages_to_combine: 2
+  # Fetch tasks for the last N days on consumer assignment
+  num_days_to_fetch_on_assign: 2
+  # Bucket to fetch sparse JSONs from
+  s3_bucket: ""
+
+telemetry:
+  protocol: influx
+  # We add the environment tag to all metrics
+  environment: test
+  influx:
+    # Interval in seconds at which frequency the metrics are pushed to graphite
+    reporting_interval: 600
+    prefix: "anomalydb"
+    database: "anomalydb-metrics"
+    server: "test.com"
+    port: 80

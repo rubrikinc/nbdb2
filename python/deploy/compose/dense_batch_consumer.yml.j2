@@ -1,0 +1,20 @@
+version: '2'
+services:
+  metric_consumer:
+    image: {{ image_repo }}:{{ image_tag }}
+    entrypoint: ["python3"]
+    command: [
+      "nbdb/batch_consumer/dense_batch_consumer_app.py",
+      "--consumer_mode=rollup",
+      "--setting_file=nbdb/config/{{ config_file }}",
+      "--schema_mapping=batch:nbdb/config/{{ schema_file }}",
+      "--batch_filter_file=nbdb/config/{{ filter_file }}"
+      ]
+    cpu_shares: 1024
+    mem_reservation: 1024m
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: AnomalyDB-dense-batch-consumer-{{ mode }}
+        awslogs-region: {{ region }}
+        awslogs-stream-prefix: {{ mode }}

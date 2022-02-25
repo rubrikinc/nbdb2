@@ -1,0 +1,130 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# Minimum interval at storage stores, so all data points are aligned to ceiling of this interval
+MIN_STORAGE_INTERVAL: 1
+
+sparse_algos:
+  - algo: "SparseAlgoLossLess"
+    pattern: [".*count$", ".*uptime.*"]
+  - algo: "SparseAlgoPercentileWindowDelta"
+    pattern: [".*p\\d+$"]
+    min_delta: 0.0001
+    quantile: .9
+    window_size: 10
+  - algo: "SparseAlgoLastValueDelta"
+    min_delta: 0.0001
+  - algo: "SparseAlgoOutlierType"
+    pattern: [".*outlier"]
+    min_delta: 0.001
+    bin_count: 1000
+    band_computation_points: 4300
+    max_band_width: 0.05
+    min_band_probability: 0.01
+    min_band_probability_change: 0.001
+    drop_before_ready: true
+    report_aggregated_stats: false
+  - algo: "SparseAlgoOutlierType"
+    pattern: [".*high_dimensional_stats"]
+    min_delta: 0.05
+    bin_count: 1000
+    band_computation_points: 4300
+    max_band_width: 0.05
+    min_band_probability: 0.01
+    min_band_probability_change: 0.001
+    drop_before_ready: true
+    report_aggregated_stats: true
+    stats_interval: 2
+    drop_tags: ["node", "job_id"]
+
+transforms:
+  non_negative_derivative:
+    include_regex: [".*transform.count$"]
+    exclude_regex: []
+    suffix: "t_meter"
+
+granularities:
+  query: 600
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+# all measurements must be defined here
+# <measurement name>:
+#  <field name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+
+sparseness_disabled_patterns:
+  - pattern:
+      tkn3: Diamond
+      tkn4: loadavg
+      field: '*'
+    interval: 10
+  - pattern:
+      tkn3: Diamond
+      tkn4: uptime
+      field: '*'
+    interval: 10
+
+cross_cluster_patterns:
+  - pattern: service_1.Fileset.*
+    hashkey: tkn3=service_1|tkn4=Fileset
+  - pattern: Diamond.process_1.Node.Status.*
+    hashkey: tkn3=Diamond|tkn4=process_1|tkn5=Node|tkn6=Status
+  - pattern: Diamond.loadavg.*
+    hashkey: tkn3=Diamond|tkn4=loadavg
+
+datasources:
+  cc:
+    # Flat & sharded
+    num_shards: 2
+    shard_tag_key: none
+  sparse_3:
+    tf1:
+      delta_threshold: 0.1
+    tf2:
+      delta_threshold: 0.1
+    tf3:
+      delta_threshold: 0.1
+  global:
+    field:
+  field:
+    count:
+  m:
+    f:
+  n:
+    f:
+  rollup_data_source:
+    num_shards: 16
+    shard_tag_key: tkn1
+    windows: [3600, 7200]
+  rollup_catchall:
+    windows: [3600, 7200]
+  exploration_flat:
+
+exploration_datasources:
+  graphite: exploration_flat
+
+measurement_to_datasource_mapping:
+  graphite:
+    rules:
+      a.b.c: sparse_3
+      a.b: field
+      a.b.c.d.e: m
+    # Global rule for any data source that doesnt match the prefix rules
+    catch_all_datasource: global
+
+# rollup datasource mapping
+rollups:
+  # Rollup windows
+  windows: [3600, 7200]
+  rollup_datasource_match_rules:
+    # All Graphite metrics beginning with "clusters" go to this sharded
+    # datasource.
+    # NOTE: The tag_key prefix should match TOKEN_TAG_PREFIX in data_point.py
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_data_source
+  catch_all_datasource: rollup_catchall
+
+

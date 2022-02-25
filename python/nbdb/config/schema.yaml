@@ -1,0 +1,150 @@
+# This documents the schema supported by AnomalyDB
+# A metric that is not declared in the schema is dropped by the consumer
+#
+# <measurement name>:
+#  <f name>:
+#    delta_threshold: [optional, default is 0.05]
+#
+# Minimum interval at storage stores, so all data points are aligned to ceiling of this interval
+MIN_STORAGE_INTERVAL: 60
+
+sparse_algos:
+  - algo: "SparseAlgoLossLess"
+    pattern: [".*count$", ".*uptime.*"]
+  - algo: "SparseAlgoPercentileWindowDelta"
+    pattern: [".*p\\d+$"]
+    min_delta: 0.0001
+    quantile: .9
+    window_size: 10
+  - algo: "SparseAlgoLastValueDelta"
+    min_delta: 0.0001
+  - algo: "SparseAlgoOutlierType"
+    pattern:
+      - ".*outlier"
+      - ".*tkn3=Diamond\\|tkn4=process\\|tkn5=*DB\\|.*cpu_percent$"
+      - ".*tkn3=Diamond\\|tkn4=NetworkEbpfCollector\\|.*tcp_retransmits$"
+    min_delta: 0.01
+    bin_count: 1000
+    band_computation_points: 1000
+    max_band_width: 0.05
+    min_band_probability: 0.01
+    min_band_probability_change: 0.001
+    drop_before_ready: true
+    report_aggregated_stats: true
+    stats_interval: 2
+    drop_tags: ["node", "job_id"]
+
+transforms:
+  non_negative_derivative:
+    include_regex: [".*transform.count$"]
+    exclude_regex: []
+    suffix: "t_meter"
+
+# Data sources created in druid
+# Example
+# my_data_source:
+#   Optional sharding by cluter id, maximum 16 shards can be created
+#   num_shards: 4
+#   Optional rollup window increment.
+#   windows: [3600, 7200]
+# The above configuration will create 8 datasources, based on 4 shards and 2 windows
+# Example datasource created
+#  my_data_source_0_3600
+granularities:
+  query: 60
+  # Default segment granularity is DAILY segments
+  default_segment: DAY
+
+cross_cluster_patterns:
+  - pattern: flat_schema.f_0.*
+    hashkey: tkn3=flat_schema|tkn4=f_0
+  - pattern: flat_schema.f_1.*
+    hashkey: tkn3=flat_schema|tkn4=f_1
+
+datasources:
+  # Catch all for all tagged metrics
+  tmp_measurement_1:
+  predictable_measurement:
+  # Catch all for all graphite flat metrics
+  tmp_graphite_flat:
+  cc:
+    # Cross-cluster datasource
+    num_shards: 1
+    shard_tag_key: none
+  rollup_cc:
+    # Flat & sharded
+    num_shards: 1
+    shard_tag_key: none
+    windows: [3600]
+  flat_schema:
+    # Flat & sharded
+    num_shards: 2
+    shard_tag_key: tkn1
+  sharded_data_source:
+    # Tagged & sharded
+    num_shards: 2
+    shard_tag_key: cluster
+  # rollup_data_source will contain flat metrics beginning with "clusters"
+  rollup_data_source:
+    windows: [3600, 7200]
+  # rollup_catchall will contain tagged metrics & flat metrics not beginning
+  # with the "clusters" prefix
+  rollup_catchall:
+    windows: [3600, 7200]
+
+# The longest prefix match found below identifies the datasource for a
+# measurement. It is a many-to-one relationship, multiple prefixes can map to
+# same datasource.
+#
+# For graphite, there is no measurement. Therefore we count the metric name
+# from the fourth token onwards as the measurement. Eg. The measurement for
+# 'clusters.ABC.XYZ.Diamond.uptime.seconds' would be 'Diamond.uptime.seconds'
+measurement_to_datasource_mapping:
+  # We use the same rules for Graphite and Influx for our systest to avoid
+  # needing more datasources
+  graphite:
+    rules:
+      flat_schema: flat_schema
+    catch_all_datasource: tmp_graphite_flat
+  influx:
+    rules:
+      predictable_measurement: predictable_measurement
+      sharded_data_source: sharded_data_source
+    catch_all_datasource: tmp_measurement_1
+
+# rollup data source mapping
+rollups:
+  # Rollup windows
+  windows: [3600, 7200]
+  rollup_datasource_match_rules:
+    # All Graphite metrics beginning with "clusters" go to this sharded
+    # datasource.
+    # NOTE: The tag_key prefix should match TOKEN_TAG_PREFIX in data_point.py
+    - match_tag_key: tkn0
+      match_tag_value: clusters
+      datasource: rollup_data_source
+
+    - match_tag_key: measurement
+      datasource: rollup_catchall
+
+  # All metrics without cluster id definition goto catch_all_datasource
+  catch_all_datasource: rollup_catchall
+  # Default rollup algorithm to use
+  default_algo: "mean"
+  # Regex rules to match the rollup algorithm
+  algos:
+    last: [".*count$"]
+    max: [".*p99"]
+
+# dashboard queries, in future this list will be runtime generated and likely stored in druid itself
+dashboard_queries:
+  clusters:
+    - "cluster-uuid-x-y-z"
+    - "cluster-uuid-x-y-z"
+  dashboard_queries: []
+
+# Influx measurements defined by the end users
+measurements:
+  - "clusters.service_1"
+  - "clusters.service_2"
+  - "clusters.service_3"

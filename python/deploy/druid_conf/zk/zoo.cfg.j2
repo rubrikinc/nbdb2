@@ -1,0 +1,20 @@
+#
+# Server
+#
+tickTime=2000
+clientPort=2181
+dataDir=/data/zookeeper
+maxClientCnxns=60
+initLimit=10
+syncLimit=5
+
+#
+# Autopurge
+#
+autopurge.snapRetainCount=5
+autopurge.purgeInterval=1
+
+
+server.1={{ druid_zookeeper_1 }}:2888:3888
+server.2={{ druid_zookeeper_2 }}:2888:3888
+server.3={{ druid_zookeeper_3 }}:2888:3888

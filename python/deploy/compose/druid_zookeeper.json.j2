@@ -1,0 +1,50 @@
+[
+	{
+		"name": "druid_zookeeper",
+		"essential": true,
+		"image": "{{ druid_image_repo }}:{{ image_tag }}",
+		"cpu": 512,
+		"memoryReservation": 1024,
+		"entryPoint": [
+			"/zookeeper-entrypoint.py"
+		],
+		"environment": [
+		        {
+				"name": "ZOOKEEPER_IPS",
+				"value": "{{ zookeeper_ips }}"
+			}
+		],
+		"portMappings": [
+			{
+				"hostPort": 2181,
+				"protocol": "tcp",
+				"containerPort": 2181
+			},
+			{
+				"hostPort": 2888,
+				"protocol": "tcp",
+				"containerPort": 2888
+			},
+			{
+				"hostPort": 3888,
+				"protocol": "tcp",
+				"containerPort": 3888
+			}
+		],
+		"ulimits": [
+			{
+				"name": "nofile",
+				"softLimit": 16384,
+				"hardLimit": 16384
+			}
+		],
+		"logConfiguration": {
+			"logDriver": "awslogs",
+			"options": {
+				"awslogs-group": "AnomalyDB-druid-zookeeper-{{ mode }}",
+				"awslogs-region": "{{ region }}",
+				"awslogs-stream-prefix": "{{ mode }}"
+			}
+		}
+	}
+]

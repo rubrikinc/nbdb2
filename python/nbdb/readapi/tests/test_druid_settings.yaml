@@ -1,0 +1,64 @@
+sparse_store:
+  druid_mode: true
+  sparse_telemetry:
+    # Log metrics which are dropping less than this threshold.
+    # Range: 0.0 to 1.0
+    drop_ratio_log_threshold: 0
+    gen_sparse_data_distribution: false
+
+  sparse_algos:
+    min_delta: 0.05
+    # Number of seconds after which a data point is forced to be written even
+    # if it has not changed
+    forced_write_interval: 43200
+    quantile: .9
+    window_size: 10
+
+  heartbeat_scan:
+    interval: 6000
+    # A missing point marker is added if the current datapoint is not within
+    # `data_gap_detection_interval` seconds of the previous datapoint
+    data_gap_detection_interval: 1
+    # A series is terminated and a tombstone marker is added if no datapoints
+    # are seen within `termination_detection_interval` seconds
+    termination_detection_interval: 2
+
+sql_api:
+  workers: 10
+  default_group_by_interval: 60
+  store_read_workers: 10
+  points_per_series:
+    default: 1000
+  query_cache_size: 1000000
+  cache_provider: "memory"
+
+Druid:
+  connection_string:
+    overlord_ip: "192.168.1.78"
+    overlord_port: 8090
+    router_ip: "192.168.1.78"
+    router_port: 8888
+    cc_router_ip: "192.168.1.78"
+    cc_router_port: 8888
+    read_path: '/druid/v2/sql/'
+    scheme: 'http'
+    schema_refresh_time: 60
+  datasource:
+    maxRowsInMemory: 1000000
+    maxRowsPerSegment: 1000000
+    lateMessageRejectionPeriod: null
+    earlyMessageRejectionPeriod: null
+  batch_ingest:
+    maxNumConcurrentSubTasks: 2
+
+telemetry:
+  protocol: influx
+  # We add the environment tag to all metrics
+  environment: test
+  influx:
+    # Interval in seconds at which frequency the metrics are pushed to graphite
+    reporting_interval: 600
+    prefix: "anomalydb"
+    database: "anomalydb-metrics"
+    server: "test.com"
+    port: 80

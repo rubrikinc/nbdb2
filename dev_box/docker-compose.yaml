@@ -1,0 +1,13 @@
+version: '3.5'
+services:
+  nbdb-box:
+    build:
+      context: . # current dir
+    image: nbdb_dev:latest
+    hostname: localhost
+    privileged: true
+    network_mode: host
+    volumes:
+      - ../:/home/ubuntu/nbdb2
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.aws:/home/ubuntu/.aws

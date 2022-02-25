@@ -1,0 +1,22 @@
+-
+  tkn1: "cluster-uuid-x-y-z"
+  tkn2: "cluster"
+  tkn4: "version"
+-
+  tkn1: "cluster-uuid-x-y-z"
+  tkn2: "cluster"
+  tkn7: "service_2"
+  tkn8: "service_3"
+  field: "field"
+-
+  tkn1: "cluster-uuid-x-y-z"
+  tkn3: "Diamond"
+  tkn4: "process"
+  tkn5: "service_1"
+  field: "metric"
+-
+  tkn1: "cluster-uuid-x-y-z"
+  tkn3: "Diamond"
+  tkn4: "process"
+  tkn5: "service_2"
+  field: "metric"
